@@ -1,89 +1,48 @@
-import { readFileSync } from 'node:fs';
+import EventEmitter from 'node:events';
+import { createReadStream } from 'node:fs';
 import { FileReader } from './file-reader.interface.js';
-import { CityName, Good, Offer, OfferType, UserType } from '../../types/index.js';
 
-const LIST_SEPARATOR = ';';
+const CHUNK_SIZE = 16384;
 
-export class TSVFileReader implements FileReader {
-  private rawData = '';
-
+export class TSVFileReader extends EventEmitter implements FileReader {
   constructor(
     private readonly filename: string
-  ) {}
+  ) {
+    super();
+  }
 
-  private validateRawData(): void {
-    if (!this.rawData) {
-      throw new Error('File was not read');
+  public async read(): Promise<void> {
+    const readStream = createReadStream(this.filename, {
+      highWaterMark: CHUNK_SIZE,
+      encoding: 'utf-8',
+    });
+
+    let remainingData = '';
+    let importedRowCount = 0;
+
+    for await (const chunk of readStream) {
+      remainingData += chunk.toString();
+
+      let nextLinePosition = remainingData.indexOf('\n');
+
+      while (nextLinePosition >= 0) {
+        const completeRow = remainingData.slice(0, nextLinePosition + 1);
+        remainingData = remainingData.slice(nextLinePosition + 1);
+
+        if (completeRow.trim()) {
+          importedRowCount++;
+          this.emit('line', completeRow);
+        }
+
+        nextLinePosition = remainingData.indexOf('\n');
+      }
     }
-  }
 
-  private parseRawDataToOffers(): Offer[] {
-    return this.rawData
-      .split('\n')
-      .filter((row) => row.trim().length > 0)
-      .map((line) => this.parseLineToOffer(line));
-  }
+    if (remainingData.trim()) {
+      importedRowCount++;
+      this.emit('line', remainingData);
+    }
 
-  private parseLineToOffer(line: string): Offer {
-    const [
-      title,
-      description,
-      postDate,
-      city,
-      previewImage,
-      images,
-      isPremium,
-      isFavorite,
-      rating,
-      type,
-      bedrooms,
-      maxAdults,
-      price,
-      goods,
-      authorName,
-      authorEmail,
-      authorAvatar,
-      authorType,
-      commentsCount,
-      latitude,
-      longitude,
-    ] = line.split('\t');
-
-    return {
-      title,
-      description,
-      postDate: new Date(postDate),
-      city: city as CityName,
-      previewImage,
-      images: images.split(LIST_SEPARATOR),
-      isPremium: isPremium === 'true',
-      isFavorite: isFavorite === 'true',
-      rating: Number(rating),
-      type: type as OfferType,
-      bedrooms: Number(bedrooms),
-      maxAdults: Number(maxAdults),
-      price: Number(price),
-      goods: goods.split(LIST_SEPARATOR) as Good[],
-      author: {
-        name: authorName,
-        email: authorEmail,
-        avatarPath: authorAvatar || undefined,
-        type: authorType as UserType,
-      },
-      commentsCount: Number(commentsCount),
-      location: {
-        latitude: Number(latitude),
-        longitude: Number(longitude),
-      },
-    };
-  }
-
-  public read(): void {
-    this.rawData = readFileSync(this.filename, { encoding: 'utf-8' });
-  }
-
-  public toArray(): Offer[] {
-    this.validateRawData();
-    return this.parseRawDataToOffers();
+    this.emit('end', importedRowCount);
   }
 }
