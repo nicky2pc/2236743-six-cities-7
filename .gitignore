@@ -12,3 +12,4 @@ coverage
 
 *.tsv
 !mocks/mock-data.tsv
+.env
