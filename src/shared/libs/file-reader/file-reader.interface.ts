@@ -1,3 +1,3 @@
 export interface FileReader {
-  read(): Promise<void>;
+  read(): AsyncGenerator<string>;
 }

@@ -16,7 +16,7 @@ ${chalk.yellow('Команды:')}
 
  ${chalk.green('--version')}:                   # выводит номер версии
  ${chalk.green('--help')}:                      # печатает этот текст
- ${chalk.green('--import <path>')}:             # импортирует данные из TSV
+ ${chalk.green('--import <path> <uri> <salt>')}: # импортирует данные из TSV в базу
  ${chalk.green('--generate <n> <path> <url>')}  # генерирует произвольное количество тестовых данных
 `);
   }

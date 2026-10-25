@@ -1,24 +1,20 @@
-import EventEmitter from 'node:events';
 import { createReadStream } from 'node:fs';
 import { FileReader } from './file-reader.interface.js';
 
 const CHUNK_SIZE = 16384;
 
-export class TSVFileReader extends EventEmitter implements FileReader {
+export class TSVFileReader implements FileReader {
   constructor(
     private readonly filename: string
-  ) {
-    super();
-  }
+  ) {}
 
-  public async read(): Promise<void> {
+  public async *read(): AsyncGenerator<string> {
     const readStream = createReadStream(this.filename, {
       highWaterMark: CHUNK_SIZE,
       encoding: 'utf-8',
     });
 
     let remainingData = '';
-    let importedRowCount = 0;
 
     for await (const chunk of readStream) {
       remainingData += chunk.toString();
@@ -30,8 +26,7 @@ export class TSVFileReader extends EventEmitter implements FileReader {
         remainingData = remainingData.slice(nextLinePosition + 1);
 
         if (completeRow.trim()) {
-          importedRowCount++;
-          this.emit('line', completeRow);
+          yield completeRow;
         }
 
         nextLinePosition = remainingData.indexOf('\n');
@@ -39,10 +34,7 @@ export class TSVFileReader extends EventEmitter implements FileReader {
     }
 
     if (remainingData.trim()) {
-      importedRowCount++;
-      this.emit('line', remainingData);
+      yield remainingData;
     }
-
-    this.emit('end', importedRowCount);
   }
 }

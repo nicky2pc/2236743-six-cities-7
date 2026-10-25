@@ -85,10 +85,10 @@ npm run cli -- --generate 100 ./mocks/offers.tsv http://localhost:3123/api
 #### Импортировать данные
 
 ```bash
-npm run cli -- --import ./mocks/offers.tsv
+npm run cli -- --import ./mocks/offers.tsv "mongodb://admin:test@127.0.0.1:27017/six-cities?authSource=admin" secret
 ```
 
-Читает TSV-файл потоком и выводит предложения в консоль.
+Читает TSV-файл потоком и сохраняет предложения в MongoDB. Аргументы: путь к файлу, строка подключения к базе и соль для хеширования паролей. Авторы ищутся по email и создаются, если их ещё нет.
 
 #### Запустить проект
 
@@ -106,6 +106,20 @@ npm run start:dev
 
 Запускает проект и форматирует логи с помощью `pino-pretty`.
 
+## База данных
+
+MongoDB и mongo-express запускаются в Docker:
+
+```bash
+docker compose up -d
+```
+
+MongoDB доступна на порту `27017`, mongo-express на `http://localhost:8081` (логин `admin`, пароль `pass`). Остановить контейнеры:
+
+```bash
+docker compose down
+```
+
 ## Переменные окружения
 
 Перед запуском создайте файл `.env` в корне проекта на основе `.env.example`:
@@ -119,6 +133,10 @@ cp .env.example .env
 ```
 PORT=4000 — порт, на котором приложение ожидает подключений
 DB_HOST=127.0.0.1 — IP-адрес сервера базы данных
+DB_PORT=27017 — порт сервера базы данных
+DB_USER=admin — имя пользователя базы данных
+DB_PASSWORD=test — пароль пользователя базы данных
+DB_NAME=six-cities — имя базы данных
 SALT=secret — соль для хеширования паролей
 ```
 
